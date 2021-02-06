@@ -131,8 +131,9 @@ udp_source_impl::udp_source_impl(size_t itemsize,
 
     int out_multiple = (d_payloadsize - d_header_size) / d_block_size;
 
-    if (out_multiple == 1)
-        out_multiple = 2; // Ensure we get pairs, for instance complex -> ichar pairs
+    //is this generic or due to a special case?
+    //if (out_multiple == 1)
+    //    out_multiple = 2; // Ensure we get pairs, for instance complex -> ichar pairs
 
     gr::block::set_output_multiple(out_multiple);
 
@@ -221,7 +222,7 @@ int udp_source_impl::work(int noutput_items,
 
     int bytes_available = netdata_available();
     char* out = (char*)output_items[0];
-    unsigned int num_requested = noutput_items * d_block_size;
+    unsigned int num_requested = noutput_items * d_block_size;  // <-- wrong ?!?
 
     // quick exit if nothing to do
     if ((bytes_available == 0) && (d_localqueue->empty())) {
@@ -307,7 +308,7 @@ int udp_source_impl::work(int noutput_items,
 
     // Number of data-only blocks requested (set_output_multiple() should make
     // sure this is an integer multiple)
-    long blocks_requested = noutput_items / d_precomp_data_over_item_size;
+    long blocks_requested = noutput_items * d_veclen * d_itemsize / d_precomp_data_size;
     // Number of blocks available accounting for the header as well.
     long blocks_available = d_localqueue->size() / (d_payloadsize);
     long blocks_retrieved;
@@ -320,7 +321,7 @@ int udp_source_impl::work(int noutput_items,
 
     // items returned is going to match the payload (actual data) of the number of
     // blocks.
-    itemsreturned = blocks_retrieved * d_precomp_data_over_item_size;
+    itemsreturned = blocks_retrieved * d_precomp_data_over_item_size / d_veclen;
 
     // We're going to have to read the data out in blocks, account for the header,
     // then just move the data part into the out[] array.
